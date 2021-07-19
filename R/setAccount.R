@@ -1,4 +1,3 @@
-utils::globalVariables(names = c("APIinfo"),package = "tsentiment")
 #' Set Twitter Developer Account Api Information
 #'
 #' This function should be used at the start of each session
@@ -16,24 +15,35 @@ utils::globalVariables(names = c("APIinfo"),package = "tsentiment")
 
 # set Twitter API V2 account informations
 
+
 setAccount <- function(params){
 
-  isVersionOk <- checkVersionForSentiment()
+  isConfirmOk <- checkConfirmForUSer()
 
-  if (!is.null(isVersionOk)){
+  fileConfirmation <- NULL
 
-    APIinfo <- NULL
+  if (isConfirmOk == "y"){
 
-    # Set for global using
-    APIinfo <<- params
-    # User must be given BEARER_TOKEN , query and page parameters
+    fileConfirmation <- isConfirmOk
 
-    APIinfo$max_results <<- 100
-    APIinfo$url <<- 'https://api.twitter.com/2/tweets/search/recent'
+    isVersionOk <- checkVersionForSentiment()
+
+    if (!is.null(isVersionOk)){
+
+      # Setting env
+      APIinfo$BEARER_TOKEN = params$BEARER_TOKEN
+      APIinfo$query = params$query
+      APIinfo$page = params$page
+      # User must be given BEARER_TOKEN , query and page parameters
+
+    }else{
+      message("version problem")
+    }
 
   }else{
-    message("version problem")
+    warning("User file writing confirmation fail,\n permission is needed to print analysis results,\n you can try again to allow it.")
   }
+
 }
 
 
