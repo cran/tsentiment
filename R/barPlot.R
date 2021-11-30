@@ -6,9 +6,6 @@ utils::globalVariables(names = c("sentiment","Score","png","dev.off"),package = 
 #' @return file
 #' @export
 #' @param tweet Cleaned tweet data
-#' @examples
-#' tweet <- "Your analysed data"
-#' getBarSentiment(tweet)
 #' @importFrom syuzhet get_nrc_sentiment
 #' @importFrom ggplot2 ggplot aes geom_bar theme xlab ylab
 #' @importFrom graphics strwidth
@@ -44,8 +41,11 @@ getBarSentiment <- function(tweet = NULL){
     print(plotted)
 
     dev.off()
-    message(paste("on",imageBase,"location"))
-    message(paste(pngName, "file created!"))
+    cat(stringi::stri_pad_both(c('--Bar Plot--','Saved folder path :,',
+                                 imageBase,
+                                 'File name : ',
+                                 pngName),
+                               getOption('width')*0.9), sep='\n')
   }else{
     warning("Bar plot not created because tweet param do not exist")
   }

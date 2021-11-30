@@ -4,12 +4,6 @@
 #'
 #' @return list
 #' @export
-#' @usage APIinfo
-#' @param  APIinfo is environment
-#' @examples
-#' APIinfo <- list(BEARER_TOKEN = "token",query = "love",page = 100)
-#' tweetFetcher()
-
 
 tweetFetcher <- function() {
   # https://github.com/twitterdev/Twitter-API-v2-sample-code/blob/master/Recent-Search/recent-search.r
@@ -17,15 +11,11 @@ tweetFetcher <- function() {
   headers <-
     c(`Authorization` = sprintf('Bearer %s', APIinfo$BEARER_TOKEN))
 
-  params = list(
-    `query` = paste(APIinfo$query, "lang:en"),
-    `max_results` = APIinfo$max_results,
-    `tweet.fields` = APIinfo$tweet.fields,
-    `page` = APIinfo$page
-  )
+  # word key is required for api query param key
+  params = list(`word` = APIinfo$query)
   fetchInfo <-
     list("headers" = headers,
-         "params" = params,
+         params = params,
          url = APIinfo$url)
 
   return(fetchInfo)
@@ -35,51 +25,39 @@ tweetFetcher <- function() {
 
 # Twitter Recent Search Fetch
 tweetFetcher.fetch <- function(returnedInfo) {
+  message("Analysis started !")
   # https://stackoverflow.com/questions/12193779/how-to-write-trycatch-in-r
-  out <- tryCatch({
-    response <-
-      httr::GET(
-        url = returnedInfo$url,
-        httr::add_headers(.headers = returnedInfo$headers),
-        query = returnedInfo$params
-      )
+  text = NULL
+  pb <- NULL
+  #scanned start 1 because also fetchedTweet variable have a fetched tweet
+  scanned <- 1
+  fetchedTweet <- getTweet(returnedInfo)
+  isRate = fetchedTweet$remainingRateLimit
+  isRemain = if (is.numeric(isRate)) isRate else 1
 
-    recent_search_body <-
-      httr::content(
-        response,
-        as = 'parsed',
-        type = 'application/json',
-        simplifyDataFrame = TRUE
-      )
-
-    nextParams = list(`query` = returnedInfo$params$query,
-                      `next_token` = recent_search_body$meta$next_token)
-
-    nextInfo = returnedInfo
-    paginateRequested <-
-      paste(
-        recent_search_body$data$text,
-        nextTweetFetcher(nextInfo, nextParams, q = returnedInfo$params$page)
-      )
-
-    return(paginateRequested)
-
-  },
-  error = function(err) {
-    message("Tweet Fetch Failed ")
-    message("Here's the original error message:")
-    message(err)
-    return(NULL)
-  },
-  warning = function(warn) {
-    message("Tweet Fetch Warning ")
-    message("Here's the original error message:")
-    message(warn)
-  },
-  finally = {
-    message(paste("Processed URL:", APIinfo$url))
-    message("Processing end")
-  })
-
-  return(out)
+  if (is.numeric(isRate)){
+    # isRemain + 1 give correct percent information, because fetching one before start progress bar
+    pb = progress::progress_bar$new(format = "[:bar] :current/:total (:percent)", total = isRemain + 1)
+  }
+  if (!is.null(pb)){
+    # loop condition order is important, first of every time check fetchedTweet
+    while(!is.null(fetchedTweet) && scanned <= isRemain){
+      scanned = scanned + 1
+      text <- if (!is.null(text))
+        paste(text, fetchedTweet$text)
+      else
+        fetchedTweet$text
+      returnedInfo$params = fetchedTweet$nextParams
+      fetchedTweet <- getTweet(returnedInfo)
+      pb$tick()
+      Sys.sleep(1 / isRate)
+    }
+    # need completed %100 percent
+    pb$tick(isRemain + 1)
+    Sys.sleep(1 / isRate)
+    message(paste("\nScaning result :",scanned,"page scanned !"))
+    return(text)
+  }else{
+      return(NULL)
+  }
 }
